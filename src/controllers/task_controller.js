@@ -1,5 +1,6 @@
 const TaskSchema = require('../models/task_model.js');
-
+const {BadRequestError, NotFoundError} = require('../errors/index.js');
+const validationResult = require('express-validator');
 
 /**
  * Calculates the duration between two dates.
@@ -11,7 +12,11 @@ const TaskSchema = require('../models/task_model.js');
 
 const TaskControl = {
 create: async(req, res,next) => {
+    const errors = validationResult(req);
         try {
+            if(!errors.isEmpty()){
+                next(new BadRequestError(errors.arrays()[0].msg));
+            }
             const newTask = await TaskSchema.create(req.body);
             res.status(201).json(newTask);
         } catch (error) {
@@ -21,7 +26,9 @@ create: async(req, res,next) => {
     getTask: async(req, res,next) => {
         try {
             const get = await TaskSchema.find();
-            res.status(200).json(get);
+            if(get){
+                res.status(200).json(get);
+            }
         } catch (error) {
           next(error);
         }
@@ -29,8 +36,11 @@ create: async(req, res,next) => {
     getById: async(req, res,next) => {
         try {
             const id= req.params.id;
-             const get = await TaskSchema.findById(id);
-            res.status(200).json(get);
+             const getId = await TaskSchema.findById(id);
+             if (!getId){
+                return next(new NotFoundError(`Task not found`));
+             }
+            res.status(200).json(getId);
         } catch (error) {
           
             next(error);
@@ -40,6 +50,9 @@ create: async(req, res,next) => {
         try {
             const id= req.params.id;
             const update = await TaskSchema.findByIdAndUpdate(id, req.body);
+            if(!update){
+                return next(new NotFoundError(`Task not found`));
+            }
             res.status(200).json(update);
         } catch (error) {
             next(error);
@@ -49,7 +62,7 @@ create: async(req, res,next) => {
         try {
             const id= req.params.id;
             const deleteTask = await TaskSchema.findByIdAndDelete(id);
-            res.status(200).json(deleteTask);
+            res.status(200).json({message: 'Task Deleted !'});
         } catch (error) {
           next(error);
         }
